@@ -17,13 +17,19 @@ import java.util.HashMap;
 
 public class GameScreen extends AbstractGameScreen {
     ru.vsu.csf.starkina.model.Game game;
+    GameScreenState state;
+
     HashMap<FigureName, TextureRegion> textures;
     TextureRegion bg;
     TextureRegion darkCell;
+    TextureRegion theEnd;
+    TextureRegion combinations;
+    boolean isShowingCombinations;
 
     final Rectangle leverRectangle = new Rectangle(725, 140, 60, 320);
     final Rectangle newGameBtnRect = new Rectangle(110, 25, 90, 35);
     final Rectangle screenRect = new Rectangle(90, 70, 615, 315-70);
+    final Rectangle combinationRect =  new Rectangle(577, 29, 106, 34);
 
     final BitmapFont font = new BitmapFont() {{ setColor(Color.YELLOW); }};
 
@@ -33,8 +39,8 @@ public class GameScreen extends AbstractGameScreen {
         add(new Vector2(431, 149));
     }};
 
-    final Vector2 incomeLabelPosition = new Vector2(637, 267);
-    final Vector2 coinsLabelPosition  = new Vector2(637, 247);
+    final Vector2 incomeLabelPosition = new Vector2(637, 294);
+    final Vector2 coinsLabelPosition  = new Vector2(637, 274);
 
     final float CELL_SIZE = 90;
 
@@ -45,6 +51,8 @@ public class GameScreen extends AbstractGameScreen {
     @Override
     public void show() {
         super.show();
+        state = GameScreenState.POWERED_OFF;
+        isShowingCombinations = false;
 
         game = ru.vsu.csf.starkina.model.Game.getInstance();
 
@@ -57,26 +65,32 @@ public class GameScreen extends AbstractGameScreen {
 
         bg = new TextureRegion(new Texture(Gdx.files.internal("graphics/bg.jpg")));
         darkCell = new TextureRegion(new Texture(Gdx.files.internal("graphics/darkCell.png")));
+        theEnd = new TextureRegion(new Texture(Gdx.files.internal("graphics/end.jpg")));
+        combinations = new TextureRegion(new Texture(Gdx.files.internal("graphics/combination.jpg")));
 
         Gdx.input.setInputProcessor(new InputAdapter() {
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
                 screenY = SlotMachine.HEIGHT - screenY;
 
-                if (game.isInGame()) {
-                    if (leverRectangle.contains(screenX, screenY)) {
-                        game.roll();
-                        return true;
-                    }
-                    return false;
+                if (newGameBtnRect.contains(screenX, screenY)) {
+                    game.startNewGame();
+                    state = GameScreenState.IN_GAME;
+                    isShowingCombinations = false;
                 }
-                else {
-                    if (newGameBtnRect.contains(screenX, screenY)) {
-                        game.startNewGame();
-                        return true;
-                    }
-                    return false;
+
+                if (combinationRect.contains(screenX, screenY)) {
+                    isShowingCombinations = !isShowingCombinations;
                 }
+
+                if (state == GameScreenState.IN_GAME && leverRectangle.contains(screenX, screenY)) {
+                    game.roll();
+
+                    if (!game.isInGame()) {
+                        state = GameScreenState.THE_END;
+                    }
+                }
+                return true;
             }
 
             @Override
@@ -96,27 +110,36 @@ public class GameScreen extends AbstractGameScreen {
 
         batch.begin();
 
-        batch.enableBlending();
-
         batch.setColor(1,1,1, 1);
         batch.draw(bg, 0, 0, SlotMachine.WIDTH, SlotMachine.HEIGHT);
 
-        for (int i = 0; i < game.getMachine().getScreen().length; i++) {
-            TextureRegion t = textures.get(game.getMachine().getScreen()[i]);
-            batch.draw(t, screenCellCoords.get(i).x, screenCellCoords.get(i).y, CELL_SIZE, CELL_SIZE);
-        }
-
-        if (!game.isInGame()) {
-            batch.setColor(1, 1, 1, 0.7f);
-            batch.draw(darkCell, screenRect.x, screenRect.y, screenRect.width, screenRect.height);
+        switch (state) {
+            case POWERED_OFF:
+                batch.setColor(1, 1, 1, 0.7f);
+                batch.draw(darkCell, screenRect.x, screenRect.y, screenRect.width, screenRect.height);
+                break;
+            case IN_GAME:
+                for (int i = 0; i < game.getMachine().getScreen().length; i++) {
+                    TextureRegion t = textures.get(game.getMachine().getScreen()[i]);
+                    batch.draw(t, screenCellCoords.get(i).x, screenCellCoords.get(i).y, CELL_SIZE, CELL_SIZE);
+                }
+                break;
+            case THE_END:
+                batch.draw(theEnd, screenRect.x, screenRect.y, screenRect.width, screenRect.height);
+                break;
         }
 
         batch.setColor(1,1,1,1);
-        if (game.isInGame()) {
+
+        if (isShowingCombinations) {
+            batch.draw(combinations, screenRect.x, screenRect.y, screenRect.width, screenRect.height);
+        }
+
+
+        if (game.isInGame() && !isShowingCombinations) {
             font.draw(batch, String.valueOf(game.getMachine().getProfit()), incomeLabelPosition.x, incomeLabelPosition.y);
             font.draw(batch, String.valueOf(game.getPlayer().getCoins()), coinsLabelPosition.x, coinsLabelPosition.y);
         }
-        batch.disableBlending();
         batch.end();
     }
 }

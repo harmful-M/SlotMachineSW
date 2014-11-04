@@ -24,9 +24,10 @@ public class Machine {
             put(2010, 600);
             put(2001, 500);
             put(1200, 500);
-            put(210, 100);
             put(1020, 200);
             put(1110, 400);
+            put(3,50);
+            put(30,100);
         }};
 
     private static final ArrayList<FigureName> drum = new ArrayList<FigureName>() {{

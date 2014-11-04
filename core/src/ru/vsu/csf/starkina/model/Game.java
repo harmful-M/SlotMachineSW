@@ -46,8 +46,6 @@ public class Game {
         if (p > 0) {
             currentPlayer.addScore(p);
             currentPlayer.addCoins(p);
-
-
         }
         else if (currentPlayer.getCoins() <= 0) {
             inGame = false;
